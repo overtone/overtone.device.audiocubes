@@ -7,8 +7,9 @@
 ;;; would get lost in the chatter)
 
 (let [client (osc-client "localhost" 8000)] 
-  (osc-listen 
+  (osc-handle 
     (osc-server 7000) ; create a new OSC server listening on port 7000
+    "/audiocubes"
     ;; Create a new cube message handler to respond to cube-related events
     (mk-cube-handler {:topology ; Topology change
                       (fn [topology-list] (println (stringify-topology-list topology-list)))
