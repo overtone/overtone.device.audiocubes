@@ -14,7 +14,7 @@ Runs the bridge sending messages to localhost port 7000 and receiving them on 80
  
 ### Creating handlers
 
-See `test/example.clj`. Create an OSC handler with `mk-cube-handle` passing a map of event type to handler function, available event types to use as keys in the map are as follows:
+See `test/example.clj`. Create an OSC handler with `mk-cube-handler` passing a map of event type to handler function, available event types to use as keys in the map are as follows:
 
 * `:topology` Called when the cube topology is changed, and passed a list of 
 tuples describing the new per-cube and per-face adjacencies. Each entry in the 
