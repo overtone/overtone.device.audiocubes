@@ -61,7 +61,7 @@ Any connected cube, whether directly connected or through the IR mesh network, c
 
 ## Project Info
 
-Import as `[overtone/device/audiocubes "0.1"]`. Depends on `[overtone/osc-clj "0.7.1"]`, previous versions have a necessary OSC message send method marked as private.
+Import as `[overtone/device/audiocubes "0.1.1"]`. Depends on `[overtone/osc-clj "0.7.1"]`, previous versions have a necessary OSC message send method marked as private.
 
 ### Author
 
