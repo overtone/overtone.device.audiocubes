@@ -73,7 +73,7 @@
 ;;; successful invocation. This cleans up the message stream, it doesn't entirely eliminate odd
 ;;; messages but it does go quite a long way towards making the output usable.
 
-(defn- debounce 
+(defn debounce 
   "Wrap a function such that calls within 'timeout' milliseconds of a previous call
    are ignored and return nil, other calls call the wrapped function and return its result"
   [timeout f]
@@ -114,7 +114,17 @@
    function to respond to cube related OSC messages"
   [handler-map]
   (let [debounced-parse-topology (debounce 200 parse-topology)
-        debounced-parse-topology2d (debounce 200 parse-topology2d)]
+        debounced-parse-topology2d (debounce 200 parse-topology2d)
+        create-initial-sensor-data #(apply hash-map 
+                                           (flatten (for 
+                                                      [face (range 0 4)]
+                                                      [face (atom {:min 1.0 :max 0.0})])))
+        sensor-values (apply hash-map 
+                             (apply concat 
+                               (for 
+                                 [cube (range 0 16)] 
+                                 ;; Storing the per-face sub-structure as an atom to simplify reset
+                                 [cube (atom (create-initial-sensor-data))])))]
     (fn [{[message-name & message] :args}]
       (case message-name
         "topology_update"  ; {"topology_update",count,cubeA,faceA,cubeB,faceB....}
@@ -128,13 +138,38 @@
         (let [[cube] message] ; other message, extract cube number
           (case message-name
             "attached" 
-            (if-let [handler (:attached handler-map)] (handler cube))
+            (if-let [handler (:attached handler-map)] 
+              (do 
+                ;; Reset calibration data for this cube
+                (reset! (sensor-values cube) (create-initial-sensor-data))
+                (handler cube)))
             "detached" 
             (if-let [handler (:detached handler-map)] (handler cube)) 
             "added" 
-            (if-let [handler (:added handler-map)] (handler cube))
+            (if-let [handler (:added handler-map)] 
+              (do 
+                ;; Reset calibration data for this cube
+                (reset! (sensor-values cube) (create-initial-sensor-data))
+                (handler cube)))
             "sensor_update" 
-            (if-let [handler (:sensor-updated handler-map)] (apply handler message)) 
+            (if-let [handler (:sensor-updated handler-map)] 
+              ;; Apply auto-calibration
+              (let [[cube face value] message
+                    historic-values (@(sensor-values cube) face)
+                    clipped-value (min (max value 0.05) 0.95)
+                    min-value (min clipped-value (:min @historic-values))
+                    max-value (max clipped-value (:max @historic-values))
+                    last-returned-value (if (contains? @historic-values :last) (:last @historic-values) -1)
+                    value-range (if (> max-value min-value) 
+                                   (- max-value min-value)
+                                   1.0)
+                    calibrated-value  (/ (- clipped-value min-value) value-range)]
+                (do 
+                  (reset! historic-values {:min min-value :max max-value :last calibrated-value}) 
+                  (if (== last-returned-value calibrated-value)
+                    ;; Don't return streams of identical values
+                    nil
+                    (handler cube face calibrated-value)))))
             "color-update" 
             (if-let [handler (:colour-updated handler-map)] (apply handler message)) 
             "sensoring-only-mode" 

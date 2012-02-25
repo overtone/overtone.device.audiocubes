@@ -26,7 +26,8 @@
                                    (println (str "Cube " cube " added to network"))
                                    (set-colour client cube 50 255 30)))
                       :sensor-updated ; Sensor value updated
-                      (fn [cube face sensor-value] ()) ; Do nothing here for now, spams values
+                      (fn [cube face sensor-value] 
+                        (println cube face sensor-value)) ; Print sensor data
                       :colour-updated ; Colour set for cube
                       (fn [cube red green blue] 
                         (println (str "Cube " cube " set to r=" red " g=" green " b=" blue)))

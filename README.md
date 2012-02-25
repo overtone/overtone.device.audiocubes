@@ -53,9 +53,11 @@ The return from `mk-cube-handler` can then be attached to an OSC server instance
 
 The `:topology` and `:topology2d` events are debounced, that is handlers you create will only be called at most once every (currently) 200ms. This is to attempt to work around a behaviour in the OSC Bridge code which tends to emit bogus empty topology events immediately after the real ones.
 
+The `:sensor-updated` events are calibrated on a per-cube, per-face basis. This should mean you get a sensible signal between 0.0 and 1.0 for each face, you will need to pass the sensor through its full range of values for a given target before it produces sane results. In addition the handler won't be called if the value hasn't changed so there should be less chat from these events than before. Re-calibration is performed if a cube is detached then re-attached.
+
 ### Setting cube colour
 
-Any connected cube, whether directly connected or through the IR mesh network, can have the colour of its internal LED set with `(set-colour cube red green blue)`, where cube is the ID of the cube to set (0-15) and the other values the RGB values to set (0-255)
+Any connected cube, whether directly connected or through the IR mesh network, can have the colour of its internal LED set with `(set-colour osc-client cube red green blue)`, where cube is the ID of the cube to set (0-15) and the other values the RGB values to set (0-255)
 
 ## Project Info
 
