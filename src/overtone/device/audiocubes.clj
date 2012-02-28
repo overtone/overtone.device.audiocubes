@@ -155,14 +155,16 @@
             (if-let [handler (:sensor-updated handler-map)] 
               ;; Apply auto-calibration
               (let [[cube face value] message
+                    ;; historic-values is (atom {:min :max :last}) for the appropriate cube / face
                     historic-values (@(sensor-values cube) face)
+                    ;; clip values to between 0.05 and 0.95, reduces noise at what would otherwise
+                    ;; be the zero signal point and allows for cubes to return 'nothing' as a sensor
+                    ;; value in a way they wouldn't otherwise do (presumably due to sensor noise)
                     clipped-value (min (max value 0.05) 0.95)
                     min-value (min clipped-value (:min @historic-values))
                     max-value (max clipped-value (:max @historic-values))
                     last-returned-value (if (contains? @historic-values :last) (:last @historic-values) -1)
-                    value-range (if (> max-value min-value) 
-                                   (- max-value min-value)
-                                   1.0)
+                    value-range (if (> max-value min-value) (- max-value min-value) 1.0)
                     calibrated-value  (/ (- clipped-value min-value) value-range)]
                 (do 
                   (reset! historic-values {:min min-value :max max-value :last calibrated-value}) 
@@ -171,9 +173,13 @@
                     nil
                     (handler cube face calibrated-value)))))
             "color-update" 
-            (if-let [handler (:colour-updated handler-map)] (apply handler message)) 
+            (if-let [handler (:colour-updated handler-map)] 
+              (let [[cube red green blue] message]
+                (handler cube red green blue))) 
             "sensoring-only-mode" 
-            (if-let [handler (:sensor-mode-updated handler-map)] (apply handler message))
+            (if-let [handler (:sensor-mode-updated handler-map)] 
+              (let [[cube sensor-only-mode] message]
+                (handler cube sensor-only-mode)))
             nil))))))
 
 
