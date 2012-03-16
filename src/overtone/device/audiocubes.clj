@@ -112,7 +112,7 @@
 (defn mk-cube-handler
   "Constructs a handler function which can be passed into the osc-listen
    function to respond to cube related OSC messages"
-  [handler-map]
+  [&{:keys [topology topology2d attached detached added sensor-updated colour-updated sensor-mode-updated]}]
   (let [debounced-parse-topology (debounce 200 parse-topology)
         debounced-parse-topology2d (debounce 200 parse-topology2d)
         create-initial-sensor-data #(apply hash-map 
@@ -121,38 +121,38 @@
                                                       [face (atom {:min 1.0 :max 0.0})])))
         sensor-values (apply hash-map 
                              (apply concat 
-                               (for 
-                                 [cube (range 0 16)] 
-                                 ;; Storing the per-face sub-structure as an atom to simplify reset
-                                 [cube (atom (create-initial-sensor-data))])))]
+                                    (for 
+                                      [cube (range 0 16)] 
+                                      ;; Storing the per-face sub-structure as an atom to simplify reset
+                                      [cube (atom (create-initial-sensor-data))])))]
     (fn [{[message-name & message] :args}]
       (case message-name
         "topology_update"  ; {"topology_update",count,cubeA,faceA,cubeB,faceB....}
-        (if-let [handler (:topology handler-map)]
+        (if-let [handler topology]
           (if-let [topology (debounced-parse-topology message)]
             (handler topology)))
         "topology_2D" ; Summary of implied cube positions and rotation from topology information
-        (if-let [handler (:topology2d handler-map)]
+        (if-let [handler topology2d]
           (if-let [topology (debounced-parse-topology2d message)]
             (handler topology)))
         (let [[cube] message] ; other message, extract cube number
           (case message-name
             "attached" 
-            (if-let [handler (:attached handler-map)] 
+            (if-let [handler attached] 
               (do 
                 ;; Reset calibration data for this cube
                 (reset! (sensor-values cube) (create-initial-sensor-data))
                 (handler cube)))
             "detached" 
-            (if-let [handler (:detached handler-map)] (handler cube)) 
+            (if-let [handler detached] (handler cube)) 
             "added" 
-            (if-let [handler (:added handler-map)] 
+            (if-let [handler added] 
               (do 
                 ;; Reset calibration data for this cube
                 (reset! (sensor-values cube) (create-initial-sensor-data))
                 (handler cube)))
             "sensor_update" 
-            (if-let [handler (:sensor-updated handler-map)] 
+            (if-let [handler sensor-updated] 
               ;; Apply auto-calibration
               (let [[cube face value] message
                     ;; historic-values is (atom {:min :max :last}) for the appropriate cube / face
@@ -173,11 +173,11 @@
                     nil
                     (handler cube face calibrated-value)))))
             "color-update" 
-            (if-let [handler (:colour-updated handler-map)] 
+            (if-let [handler colour-updated] 
               (let [[cube red green blue] message]
                 (handler cube red green blue))) 
             "sensoring-only-mode" 
-            (if-let [handler (:sensor-mode-updated handler-map)] 
+            (if-let [handler sensor-mode-updated] 
               (let [[cube sensor-only-mode] message]
                 (handler cube sensor-only-mode)))
             nil))))))
